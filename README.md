@@ -1,67 +1,62 @@
-# InspectPro — Cloudflare deployment package
+# InspectPro — Cloudflare Pages deployment
 
-**Version:** 0.2.0 · **Product:** mobile-first inspection, audit, evidence and corrective-action platform · **Deployment target:** Cloudflare Workers + Workers Static Assets + D1 + R2.
+**Version:** 0.2.1 · **Deployment target:** Cloudflare Pages with Pages Functions, D1 and optional R2.
 
-InspectPro is being built as a modular product. The owner Administration panel controls workspace settings, feature flags, user accounts, AI configuration metadata and data export. Core inspection and corrective-action workflows do not require an AI provider. The web shell is a PWA and is cached for offline launch; queued inspection submission is best-effort browser storage and syncs when connectivity returns.
+## Deploy with Cloudflare Pages
 
-## Cloudflare resources
+This repository is configured for **Cloudflare Pages**, not Workers Builds. The static application is served from `public/`; API requests under `/api/*` are handled by `functions/api/[[path]].js`, which forwards requests to the existing InspectPro API worker code.
 
-- **Workers**: application/API runtime (`src/worker.js`).
-- **Workers Static Assets**: serves `public/` from the same Worker origin.
-- **D1**: relational workspace data (`migrations/0001_initial.sql`).
-- **R2**: optional evidence file storage (`MEDIA` binding; up to 10 MB per upload).
+### Create the Pages project
 
-## Deploy
+1. In Cloudflare, open **Workers & Pages → Create application → Pages → Connect to Git**.
+2. Connect GitHub and select `abayraj56-tech/inspectpro`, branch `main`.
+3. Set **Framework preset: None**.
+4. Set **Build command: leave blank**.
+5. Set **Build output directory: public**.
+6. Save and deploy.
 
-You need a Cloudflare account, a domain (optional initially), and Node.js 20+ with npm.
+Do not select Workers, do not use Bun, and do not enter `npx wrangler deploy` as a Pages deploy command.
 
-1. Install Wrangler: `npm install` then `npx wrangler login`.
-2. Create a D1 database: `npx wrangler d1 create inspectpro-db`. Copy the returned database ID into `wrangler.toml` in place of `REPLACE_WITH_CLOUDFLARE_D1_DATABASE_ID`.
-3. Create the R2 bucket: `npx wrangler r2 bucket create inspectpro-media`.
-4. Apply the schema: `npx wrangler d1 migrations apply inspectpro-db --remote`.
-5. Set strong secrets (do not put secrets in source control):
-   - `npx wrangler secret put JWT_SECRET` (use a cryptographically random value of at least 32 bytes)
-   - `npx wrangler secret put BOOTSTRAP_SECRET` (a separate one-time setup secret)
-6. Set `ALLOWED_ORIGINS` in `wrangler.toml` to your exact production origin once known, e.g. `https://app.example.com` (no wildcard for production).
-7. Deploy: `npx wrangler deploy`.
-8. Bootstrap the first owner exactly once. Replace the URL and values; send the setup secret in the header, not the JSON body:
+### Bind the database
 
-```bash
-curl -X POST 'https://YOUR-WORKER.workers.dev/api/setup' \
-  -H 'Content-Type: application/json' \
-  -H 'X-Setup-Key: YOUR_BOOTSTRAP_SECRET' \
-  -d '{"name":"Workspace Owner","email":"you@example.com","password":"Use-A-Unique-Password-12+"}'
-```
+The application API requires a Cloudflare D1 database.
 
-9. Sign in at the deployed URL. Remove/rotate the bootstrap secret after setup (`npx wrangler secret delete BOOTSTRAP_SECRET`). Create a non-owner test user and verify role restrictions before inviting staff.
+1. Create a D1 database named `inspectpro-db` in Cloudflare.
+2. Open the Pages project → **Settings → Functions → D1 database bindings**.
+3. Add a binding with variable name `DB` and select `inspectpro-db`.
+4. Save and trigger a new deployment.
 
-The first setup endpoint is permanently disabled once a user exists. Never share your secrets or owner password with anyone.
+Apply the SQL schema from `migrations/0001_initial.sql` in the D1 database console before using the app.
 
-## Current implemented features
+### Optional evidence storage
 
-- Cloudflare Worker API and static asset hosting on one origin.
-- D1 schema and migrations for users, sites, templates, inspections, actions, settings, audit events and media metadata.
-- Password hashing with PBKDF2-SHA-256 (210,000 iterations), signed 12-hour bearer tokens, role checks and owner-only settings/user/audit controls.
-- First-owner bootstrap protected by a one-time secret.
-- Dashboard metrics, checklist templates, inspection scoring, automatic corrective actions for failed items, action status management, sites, user creation, module feature switches and JSON data export.
-- R2 evidence upload API with content-type allowlist and 10 MB limit.
-- Security headers, no-store API responses, explicit CORS allowlist support and server-side input checks.
-- PWA shell caching and a best-effort offline submission queue in the browser.
+If evidence uploads are needed, create an R2 bucket named `inspectpro-media` and add a Pages R2 binding under **Settings → Functions → R2 bucket bindings** with variable name `MEDIA`. Redeploy after changing bindings.
 
-## Important production boundaries
+### Required secrets
 
-This package is a deployable functional MVP, **not yet a fully audited commercial SaaS release**. Before real customer or sensitive operational data is used, the following work remains: independent penetration test; automated API/integration/browser tests; tenant isolation and organisation provisioning; MFA and password reset; invitation flow; immutable evidence access/download authorisation; reliable encrypted offline queue with conflict resolution; attachment association to checklist items; scheduled backup/restore drills; billing/subscription enforcement; email notifications; AI inference adapters and provider secret handling; PDF reports; rate limiting/WAF policy; data-subject request workflows; monitoring/alerting; and accessibility review. AI settings in this version are configuration metadata only; no AI inference endpoint is exposed yet. Feature flags govern module access but do not constitute billing enforcement.
+In Pages project → **Settings → Variables and Secrets**, add:
+- `JWT_SECRET`: a long random secret (at least 32 bytes).
+- `BOOTSTRAP_SECRET`: a separate one-time setup secret.
 
-The legacy Express/SQLite files are retained for local reference and tests; Cloudflare deployment uses `src/worker.js`, D1 and R2.
+Use the same environment (Production or Preview) as the deployment. Do not put secrets in GitHub or in frontend code.
 
-## Local checks
+### First owner setup
 
-```bash
-node --check src/worker.js
-node --check public/app.js
-npm test
-```
+After the D1 schema and bindings are ready, make a POST request to `/api/setup` with JSON fields `name`, `email`, and a password of at least 12 characters, plus header `X-Setup-Key: YOUR_BOOTSTRAP_SECRET`. The setup endpoint can only create the first owner once. After successful setup, remove the `BOOTSTRAP_SECRET` from Pages secrets.
 
-## Legal / ownership
+## Implemented MVP
 
-The package includes draft copyright, privacy, terms, DPA/security, acceptable-use and contractor IP templates. They are not legal advice. Trademark availability for “InspectPro” has not been cleared. Review all legal templates and third-party licences with a UK solicitor before commercial launch. Your ownership of original deliverables does not transfer third-party dependency rights.
+- Inspection templates, checklists and scoring
+- Inspection history and dashboard metrics
+- Corrective actions generated from failed checks
+- Sites and user administration
+- Owner settings and feature switches
+- Audit log and JSON export
+- Optional R2 evidence uploads
+- PWA shell and best-effort offline queue
+
+## Production boundaries
+
+This is a functional MVP, not a fully audited commercial SaaS release. Before storing sensitive operational data, complete independent security testing, tenant isolation, MFA and password reset, robust offline conflict handling, evidence access controls, backups and restore drills, monitoring, rate limiting, billing, notifications, PDF reporting and accessibility review. AI settings are configuration metadata only; no AI inference endpoint is implemented yet.
+
+Legacy Express/SQLite files remain for local reference. Cloudflare Pages deployment uses `public/`, `functions/`, D1 and optional R2.
