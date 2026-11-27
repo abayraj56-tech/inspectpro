@@ -1,0 +1,12 @@
+PRAGMA foreign_keys = ON;
+CREATE TABLE IF NOT EXISTS users (id TEXT PRIMARY KEY, email TEXT NOT NULL UNIQUE, name TEXT NOT NULL, password_hash TEXT NOT NULL, role TEXT NOT NULL DEFAULT 'inspector', active INTEGER NOT NULL DEFAULT 1, created_at TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS sites (id TEXT PRIMARY KEY, name TEXT NOT NULL, address TEXT, active INTEGER NOT NULL DEFAULT 1, created_at TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS templates (id TEXT PRIMARY KEY, name TEXT NOT NULL, category TEXT NOT NULL, description TEXT, items_json TEXT NOT NULL, active INTEGER NOT NULL DEFAULT 1, created_at TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS inspections (id TEXT PRIMARY KEY, template_id TEXT, template_name TEXT NOT NULL, site_id TEXT, site_name TEXT, inspector_name TEXT NOT NULL, score INTEGER NOT NULL, notes TEXT, answers_json TEXT NOT NULL, submitted_at TEXT NOT NULL, created_by TEXT);
+CREATE TABLE IF NOT EXISTS actions (id TEXT PRIMARY KEY, inspection_id TEXT, title TEXT NOT NULL, description TEXT, priority TEXT NOT NULL DEFAULT 'medium', status TEXT NOT NULL DEFAULT 'open', assignee TEXT, due_date TEXT, template_name TEXT, created_at TEXT NOT NULL, updated_at TEXT NOT NULL, created_by TEXT);
+CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value_json TEXT NOT NULL, updated_at TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS audit_log (id TEXT PRIMARY KEY, user_id TEXT, event TEXT NOT NULL, entity_type TEXT, entity_id TEXT, detail_json TEXT, created_at TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS media (id TEXT PRIMARY KEY, object_key TEXT NOT NULL, content_type TEXT, size INTEGER, created_at TEXT NOT NULL, uploaded_by TEXT);
+CREATE INDEX IF NOT EXISTS idx_inspections_date ON inspections(submitted_at DESC);
+CREATE INDEX IF NOT EXISTS idx_actions_status_due ON actions(status,due_date);
+CREATE INDEX IF NOT EXISTS idx_audit_date ON audit_log(created_at DESC);
