@@ -1,0 +1,14 @@
+import Database from 'better-sqlite3';
+import fs from 'node:fs';
+import path from 'node:path';
+const filename=process.env.DATABASE_PATH||'./data/inspectpro.sqlite';
+fs.mkdirSync(path.dirname(filename),{recursive:true});
+export const db=new Database(filename);
+db.pragma('journal_mode = WAL'); db.pragma('foreign_keys = ON');
+db.exec(`CREATE TABLE IF NOT EXISTS users(id TEXT PRIMARY KEY,email TEXT UNIQUE NOT NULL,name TEXT NOT NULL,password_hash TEXT NOT NULL,role TEXT NOT NULL CHECK(role IN ('owner','manager','inspector','viewer')),created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
+CREATE TABLE IF NOT EXISTS sites(id TEXT PRIMARY KEY,name TEXT NOT NULL,address TEXT,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
+CREATE TABLE IF NOT EXISTS templates(id TEXT PRIMARY KEY,name TEXT NOT NULL,category TEXT NOT NULL,description TEXT,items_json TEXT NOT NULL,created_by TEXT,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
+CREATE TABLE IF NOT EXISTS inspections(id TEXT PRIMARY KEY,template_id TEXT NOT NULL REFERENCES templates(id),site_id TEXT REFERENCES sites(id),inspector_id TEXT REFERENCES users(id),inspector_name TEXT NOT NULL,status TEXT NOT NULL DEFAULT 'submitted',score REAL,notes TEXT,started_at TEXT,submitted_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,answers_json TEXT NOT NULL,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
+CREATE TABLE IF NOT EXISTS actions(id TEXT PRIMARY KEY,inspection_id TEXT REFERENCES inspections(id),title TEXT NOT NULL,description TEXT,priority TEXT NOT NULL DEFAULT 'medium',status TEXT NOT NULL DEFAULT 'open',assignee TEXT,due_date TEXT,created_by TEXT,verified_by TEXT,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
+CREATE TABLE IF NOT EXISTS audit_log(id INTEGER PRIMARY KEY AUTOINCREMENT,user_id TEXT,operation TEXT,entity TEXT,entity_id TEXT,details_json TEXT,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
+CREATE INDEX IF NOT EXISTS idx_inspections_submitted ON inspections(submitted_at); CREATE INDEX IF NOT EXISTS idx_actions_status ON actions(status);`);

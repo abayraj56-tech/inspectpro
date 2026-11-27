@@ -1,0 +1,2 @@
+# Acceptable use (draft)
+Users may use InspectPro for lawful inspections and internal operations only. Do not upload malware, unlawful content, credentials, unnecessary sensitive data, or personal data without authority and lawful basis. Do not attempt to access other organisations' records, bypass access controls, abuse the service, or use inspection scores as sole basis for consequential decisions. Users remain responsible for competent safety procedures and verifying inspection findings.

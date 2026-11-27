@@ -1,0 +1,7 @@
+PROPRIETARY SOFTWARE LICENSE — DRAFT
+
+Copyright (c) 2026 Kulwinder Singh. All rights reserved.
+
+Subject to a separate written licence signed by the copyright owner, no permission is granted to copy, modify, distribute, publish, sublicense, sell, commercially exploit, or create derivative works from this proprietary application source or documentation.
+
+This notice does not change the licences of third-party dependencies, which are listed separately and remain governed by their respective licences. No warranty is provided with this prototype. This draft should be reviewed by a qualified solicitor and adapted to the owner's business structure and applicable law before distribution.
